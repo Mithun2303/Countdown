@@ -22,8 +22,8 @@ const right = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>The Last Reel</title>
-    <meta name="description" content="Countdown to the end of college life." />
+    <title>Final Cut</title>
+    <meta name="description" content="Final Cut: the last days of college life, one frame at a time." />
     <link rel="preconnect" href="https://res.cloudinary.com" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -39,14 +39,18 @@ const right = [
       </aside>
 
       <section class="center">
-        <p class="eyebrow">The final countdown</p>
+        <p class="eyebrow">Final Cut</p>
+        <p class="caption">
+          Some chapters end quietly. Ours was loud, late-night and full of laughter.<br />
+          Every frame here is a memory we'll carry, long after the credits roll.
+        </p>
         <div id="timer" class="timer" aria-live="off">
           <div class="unit"><span id="d">00</span><small>days</small></div>
           <div class="unit"><span id="h">00</span><small>hours</small></div>
           <div class="unit"><span id="m">00</span><small>minutes</small></div>
           <div class="unit"><span id="s">00</span><small>seconds</small></div>
         </div>
-        <p id="msg" class="msg">Until college life ends — Oct 26, 4:20 PM</p>
+        <p id="msg" class="msg">Until the final scene · Oct 26, 4:20 PM</p>
       </section>
 
       <aside class="side">
@@ -148,6 +152,14 @@ const right = [
         font-size: clamp(0.7rem, 1.4vw, 1.1rem);
         color: var(--accent);
         margin-bottom: 1.5rem;
+      }
+      .caption {
+        max-width: 34ch;
+        margin: 0 auto 2rem;
+        line-height: 1.6;
+        font-size: clamp(0.85rem, 1.5vw, 1.25rem);
+        font-style: italic;
+        opacity: 0.85;
       }
       .timer {
         display: grid;
