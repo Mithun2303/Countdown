@@ -1,0 +1,184 @@
+---
+import FilmStrip from '../components/FilmStrip.astro';
+
+// Oct 26, 4:20 PM IST
+const target = '2026-10-26T16:20:00+05:30';
+const cloud = import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME ?? '';
+
+const left = [
+  { tag: 'strip-1', direction: 'up', speed: 60 },
+  { tag: 'strip-2', direction: 'down', speed: 75 },
+  { tag: 'strip-3', direction: 'up', speed: 90 },
+] as const;
+const right = [
+  { tag: 'strip-4', direction: 'down', speed: 70 },
+  { tag: 'strip-5', direction: 'up', speed: 85 },
+  { tag: 'strip-6', direction: 'down', speed: 65 },
+] as const;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>The Last Reel</title>
+    <meta name="description" content="Countdown to the end of college life." />
+    <link rel="preconnect" href="https://res.cloudinary.com" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Special+Elite&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body data-cloud={cloud} data-target={target}>
+    <main>
+      <aside class="side">
+        {left.map((s) => <FilmStrip {...s} side="left" />)}
+      </aside>
+
+      <section class="center">
+        <p class="eyebrow">The final countdown</p>
+        <div id="timer" class="timer" aria-live="off">
+          <div class="unit"><span id="d">00</span><small>days</small></div>
+          <div class="unit"><span id="h">00</span><small>hours</small></div>
+          <div class="unit"><span id="m">00</span><small>minutes</small></div>
+          <div class="unit"><span id="s">00</span><small>seconds</small></div>
+        </div>
+        <p id="msg" class="msg">Until college life ends — Oct 26, 4:20 PM</p>
+      </section>
+
+      <aside class="side">
+        {right.map((s) => <FilmStrip {...s} side="right" />)}
+      </aside>
+    </main>
+
+    <script>
+      const body = document.body;
+      const target = new Date(body.dataset.target!).getTime();
+      const cloud = body.dataset.cloud;
+
+      // ---- Countdown ----
+      const $ = (id: string) => document.getElementById(id)!;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      function tick() {
+        const diff = Math.max(0, target - Date.now());
+        const s = Math.floor(diff / 1000);
+        $('d').textContent = pad(Math.floor(s / 86400));
+        $('h').textContent = pad(Math.floor((s % 86400) / 3600));
+        $('m').textContent = pad(Math.floor((s % 3600) / 60));
+        $('s').textContent = pad(s % 60);
+        if (diff === 0) {
+          $('msg').textContent = "That's a wrap. Thank you, college. 🎬";
+          document.body.classList.add('done');
+        }
+      }
+      tick();
+      setInterval(tick, 1000);
+
+      // ---- Film strips from Cloudinary tags ----
+      type Res = { public_id: string; format: string; version: number };
+
+      async function fillStrip(strip: HTMLElement) {
+        const tag = strip.dataset.tag!;
+        const track = strip.querySelector('.track')!;
+        let urls: string[] = [];
+        if (cloud) {
+          try {
+            const r = await fetch(`https://res.cloudinary.com/${cloud}/image/list/${tag}.json`);
+            const json = await r.json();
+            urls = (json.resources as Res[]).map(
+              (x) =>
+                `https://res.cloudinary.com/${cloud}/image/upload/f_auto,q_auto,c_fill,w_400,h_533/v${x.version}/${x.public_id}.${x.format}`,
+            );
+          } catch (e) {
+            console.warn(`Could not load Cloudinary tag "${tag}"`, e);
+          }
+        }
+        if (!urls.length) return;
+        // Repeat until one half is taller than the viewport so the loop never shows a gap
+        let set = [...urls];
+        while (set.length < 8) set = set.concat(urls);
+        const html = (list: string[]) =>
+          list.map((u) => `<img src="${u}" alt="" loading="lazy" decoding="async" />`).join('');
+        track.innerHTML = html(set) + html(set); // two identical halves for seamless loop
+      }
+      document.querySelectorAll<HTMLElement>('.strip').forEach(fillStrip);
+    </script>
+
+    <style is:global>
+      :root {
+        --paper: #f4e9c8;
+        --accent: #ff4d2e;
+      }
+      * { box-sizing: border-box; margin: 0; }
+      html, body { height: 100%; }
+      body {
+        background: radial-gradient(ellipse at center, #1a1612 0%, #070605 80%);
+        color: var(--paper);
+        font-family: 'Special Elite', monospace;
+        overflow: hidden;
+      }
+      main {
+        height: 100dvh;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
+      }
+      .side {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        padding: 0 6px;
+        height: 100%;
+        overflow: hidden;
+      }
+      .center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 1rem;
+        z-index: 3;
+      }
+      .eyebrow {
+        letter-spacing: 0.4em;
+        text-transform: uppercase;
+        font-size: clamp(0.7rem, 1.4vw, 1.1rem);
+        color: var(--accent);
+        margin-bottom: 1.5rem;
+      }
+      .timer {
+        display: grid;
+        grid-template-columns: repeat(2, auto);
+        gap: clamp(0.8rem, 2.5vw, 2.5rem) clamp(1.5rem, 4vw, 4rem);
+      }
+      .unit { display: flex; flex-direction: column; align-items: center; }
+      .unit span {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: clamp(4rem, 11vw, 11rem);
+        line-height: 0.9;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 30px rgba(255, 77, 46, 0.35);
+      }
+      .unit small {
+        text-transform: uppercase;
+        letter-spacing: 0.3em;
+        font-size: clamp(0.65rem, 1.1vw, 1rem);
+        opacity: 0.7;
+      }
+      .msg { margin-top: 2rem; opacity: 0.8; font-size: clamp(0.85rem, 1.3vw, 1.2rem); }
+      body.done .unit span { color: var(--accent); }
+
+      /* Phones: strips become two thinner columns flanking a smaller timer */
+      @media (max-width: 800px) {
+        main { grid-template-columns: 0.8fr 1.6fr 0.8fr; }
+        .side { grid-template-columns: 1fr; }
+        .side .strip:nth-child(n + 2) { display: none; }
+        .unit span { font-size: clamp(2.6rem, 14vw, 5rem); }
+        .timer { gap: 0.8rem 1.2rem; }
+      }
+    </style>
+  </body>
+</html>

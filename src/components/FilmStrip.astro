@@ -1,0 +1,83 @@
+---
+interface Props {
+  tag: string;
+  side: 'left' | 'right';
+  direction: 'up' | 'down';
+  speed: number; // seconds per loop
+}
+const { tag, side, direction, speed } = Astro.props;
+---
+
+<div class={`strip strip-${side}`} data-tag={tag} data-direction={direction} style={`--speed:${speed}s`}>
+  <div class="track"></div>
+</div>
+
+<style>
+  .strip {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: #0b0b0b;
+    border-inline: 2px solid #1d1d1d;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent);
+  }
+  /* sprocket holes along both edges */
+  .strip::before,
+  .strip::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 10px;
+    z-index: 2;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0 8px,
+      #f4e9c8 8px 20px,
+      transparent 20px 28px
+    );
+    opacity: 0.85;
+    border-radius: 2px;
+    -webkit-mask-image: none;
+  }
+  .strip::before { left: 4px; }
+  .strip::after { right: 4px; }
+
+  .track {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 20px;
+    will-change: transform;
+    animation: roll var(--speed) linear infinite;
+  }
+  .strip[data-direction='down'] .track {
+    animation-direction: reverse;
+  }
+  .strip:hover .track {
+    animation-play-state: paused;
+  }
+
+  .track :global(img) {
+    display: block;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+    border-radius: 3px;
+    filter: sepia(0.25) contrast(1.05);
+    background: #222;
+  }
+
+  /* track holds two identical halves; shift by exactly one half */
+  @keyframes roll {
+    from { transform: translateY(0); }
+    to { transform: translateY(-50%); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .track { animation: none; }
+  }
+</style>

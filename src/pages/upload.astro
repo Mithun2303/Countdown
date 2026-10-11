@@ -1,0 +1,107 @@
+---
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Upload to a strip</title>
+  </head>
+  <body>
+    <form id="f">
+      <h1>Add photos to a film strip</h1>
+
+      <label>Password
+        <input id="pw" type="password" required autocomplete="current-password" />
+      </label>
+
+      <label>Strip
+        <select id="strip">
+          {[1, 2, 3, 4, 5, 6].map((n) => <option value={n}>Strip {n}</option>)}
+        </select>
+      </label>
+
+      <label>Photos
+        <input id="files" type="file" accept="image/*" multiple required />
+      </label>
+
+      <button id="go" type="submit">Convert to WebP &amp; upload</button>
+      <ul id="log"></ul>
+    </form>
+
+    <script>
+      const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+      const MAX_SIDE = 1600;
+
+      async function toWebp(file: File): Promise<Blob> {
+        const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(bmp.width * scale);
+        c.height = Math.round(bmp.height * scale);
+        c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+        bmp.close();
+        return new Promise((res, rej) =>
+          c.toBlob((b) => (b ? res(b) : rej(new Error('WebP encode failed'))), 'image/webp', 0.85),
+        );
+      }
+
+      $('f').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const go = $<HTMLButtonElement>('go');
+        const log = $('log');
+        log.innerHTML = '';
+        go.disabled = true;
+        const files = Array.from($<HTMLInputElement>('files').files ?? []);
+
+        for (const file of files) {
+          const li = document.createElement('li');
+          li.textContent = `${file.name}: converting…`;
+          log.appendChild(li);
+          try {
+            const webp = await toWebp(file);
+            li.textContent = `${file.name}: uploading…`;
+
+            // fresh signature per file (timestamps expire after ~1h)
+            const sig = await fetch('/api/sign', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ strip: Number($<HTMLSelectElement>('strip').value), password: $<HTMLInputElement>('pw').value }),
+            });
+            const s = await sig.json();
+            if (!sig.ok) throw new Error(s.error);
+
+            const fd = new FormData();
+            fd.append('file', webp, file.name.replace(/\.[^.]+$/, '') + '.webp');
+            fd.append('api_key', s.apiKey);
+            fd.append('timestamp', String(s.timestamp));
+            fd.append('tags', s.tags);
+            fd.append('signature', s.signature);
+            const up = await fetch(`https://api.cloudinary.com/v1_1/${s.cloudName}/image/upload`, {
+              method: 'POST',
+              body: fd,
+            });
+            const out = await up.json();
+            if (!up.ok) throw new Error(out.error?.message ?? 'Upload failed');
+            li.textContent = `✓ ${file.name} → ${s.tags} (${(webp.size / 1024).toFixed(0)} KB webp)`;
+          } catch (err) {
+            li.textContent = `✗ ${file.name}: ${(err as Error).message}`;
+          }
+        }
+        go.disabled = false;
+      });
+    </script>
+
+    <style is:global>
+      body { font-family: system-ui, sans-serif; background: #111; color: #eee; display: grid; place-items: center; min-height: 100dvh; margin: 0; padding: 1rem; }
+      form { width: min(440px, 100%); display: grid; gap: 1rem; }
+      label { display: grid; gap: 0.3rem; font-size: 0.9rem; }
+      input, select, button { padding: 0.6rem; border-radius: 6px; border: 1px solid #444; background: #1c1c1c; color: inherit; font: inherit; }
+      button { background: #ff4d2e; border: 0; cursor: pointer; font-weight: 600; }
+      button:disabled { opacity: 0.5; }
+      ul { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; display: grid; gap: 0.3rem; }
+    </style>
+  </body>
+</html>
