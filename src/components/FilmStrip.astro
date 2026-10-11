@@ -30,7 +30,7 @@ const { tag, side, direction, speed } = Astro.props;
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 10px;
+    width: 8px;
     z-index: 2;
     pointer-events: none;
     background: repeating-linear-gradient(
@@ -49,8 +49,8 @@ const { tag, side, direction, speed } = Astro.props;
   .track {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 10px 20px;
+    gap: 8px;
+    padding: 8px 16px;
     will-change: transform;
     animation: roll var(--speed) linear infinite;
   }
