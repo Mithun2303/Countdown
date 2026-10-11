@@ -44,16 +44,24 @@
           const { heicTo } = await import('heic-to');
           src = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.92 });
         }
-        const bmp = await createImageBitmap(src, { imageOrientation: 'from-image' });
-        const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(bmp.width * scale);
-        c.height = Math.round(bmp.height * scale);
-        c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
-        bmp.close();
-        return new Promise((res, rej) =>
-          c.toBlob((b) => (b ? res(b) : rej(new Error('WebP encode failed'))), 'image/webp', 0.85),
-        );
+        // <img> decoding works everywhere (Safari rejects some createImageBitmap options)
+        // and applies EXIF rotation by default.
+        const url = URL.createObjectURL(src);
+        try {
+          const img = new Image();
+          img.src = url;
+          await img.decode();
+          const scale = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+          const c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * scale);
+          c.height = Math.round(img.naturalHeight * scale);
+          c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+          return await new Promise((res, rej) =>
+            c.toBlob((b) => (b ? res(b) : rej(new Error('Image encode failed'))), 'image/webp', 0.85),
+          );
+        } finally {
+          URL.revokeObjectURL(url);
+        }
       }
 
       $('f').addEventListener('submit', async (e) => {
@@ -70,6 +78,8 @@
           log.appendChild(li);
           try {
             const webp = await toWebp(file);
+            // Safari can't encode WebP and silently returns PNG; Cloudinary converts it instead.
+            const isWebp = webp.type === 'image/webp';
             li.textContent = `${file.name}: uploading…`;
 
             // fresh signature per file (timestamps expire after ~1h)
@@ -82,7 +92,8 @@
             if (!sig.ok) throw new Error(s.error);
 
             const fd = new FormData();
-            fd.append('file', webp, file.name.replace(/\.[^.]+$/, '') + '.webp');
+            fd.append('file', webp, file.name.replace(/\.[^.]+$/, '') + (isWebp ? '.webp' : '.png'));
+            fd.append('format', 'webp');
             fd.append('api_key', s.apiKey);
             fd.append('timestamp', String(s.timestamp));
             fd.append('tags', s.tags);
@@ -93,9 +104,9 @@
             });
             const out = await up.json();
             if (!up.ok) throw new Error(out.error?.message ?? 'Upload failed');
-            li.textContent = `✓ ${file.name} → ${s.tags} (${(webp.size / 1024).toFixed(0)} KB webp)`;
+            li.textContent = `✓ ${file.name} → ${s.tags} (${(webp.size / 1024).toFixed(0)} KB sent)`;
           } catch (err) {
-            li.textContent = `✗ ${file.name}: ${(err as Error).message}`;
+            li.textContent = `✗ ${file.name}: ${(err as Error).name}: ${(err as Error).message}`;
           }
         }
         go.disabled = false;

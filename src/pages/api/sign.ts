@@ -46,7 +46,7 @@ export const POST: APIRoute = async ({ request }) => {
   const timestamp = Math.floor(Date.now() / 1000);
   // Params must be signed alphabetically as k=v&k=v, then the secret appended.
   const signature = createHash('sha1')
-    .update(`tags=${tags}&timestamp=${timestamp}${apiSecret}`)
+    .update(`format=webp&tags=${tags}&timestamp=${timestamp}${apiSecret}`)
     .digest('hex');
 
   return json({ cloudName, apiKey, tags, timestamp, signature });
