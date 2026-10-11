@@ -35,6 +35,17 @@
       const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
       const MAX_SIDE = 1600;
 
+      // Safari reports any non-JSON body as "The string did not match the expected pattern",
+      // which hides the real problem. Parse manually and surface status + body instead.
+      async function readJson(res: Response) {
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          throw new Error(`HTTP ${res.status} (not JSON): ${text.slice(0, 120)}`);
+        }
+      }
+
       const isHeic = (f: File) => /\.(heic|heif)$/i.test(f.name) || /hei[cf]/i.test(f.type);
 
       async function toWebp(file: File): Promise<Blob> {
@@ -88,7 +99,7 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ strip: Number($<HTMLSelectElement>('strip').value), password: $<HTMLInputElement>('pw').value }),
             });
-            const s = await sig.json();
+            const s = await readJson(sig);
             if (!sig.ok) throw new Error(s.error);
 
             const fd = new FormData();
@@ -98,11 +109,11 @@
             fd.append('timestamp', String(s.timestamp));
             fd.append('tags', s.tags);
             fd.append('signature', s.signature);
-            const up = await fetch(`https://api.cloudinary.com/v1_1/${s.cloudName}/image/upload`, {
+            const up = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(s.cloudName)}/image/upload`, {
               method: 'POST',
               body: fd,
             });
-            const out = await up.json();
+            const out = await readJson(up);
             if (!up.ok) throw new Error(out.error?.message ?? 'Upload failed');
             li.textContent = `✓ ${file.name} → ${s.tags} (${(webp.size / 1024).toFixed(0)} KB sent)`;
           } catch (err) {

@@ -19,10 +19,10 @@ const safeEqual = (a: string, b: string) => {
 // The browser then uploads the (already webp) file straight to Cloudinary,
 // which avoids Vercel's ~4.5MB request body limit.
 export const POST: APIRoute = async ({ request }) => {
-  const apiKey = import.meta.env.CLOUDINARY_API_KEY;
-  const apiSecret = import.meta.env.CLOUDINARY_API_SECRET;
-  const cloudName = import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const password = import.meta.env.UPLOAD_PASSWORD;
+  const apiKey = import.meta.env.CLOUDINARY_API_KEY?.trim();
+  const apiSecret = import.meta.env.CLOUDINARY_API_SECRET?.trim();
+  const cloudName = import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+  const password = import.meta.env.UPLOAD_PASSWORD?.trim();
   if (!apiKey || !apiSecret || !cloudName || !password) {
     return json({ error: 'Server is missing Cloudinary / UPLOAD_PASSWORD env vars' }, 500);
   }
