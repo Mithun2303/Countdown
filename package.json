@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@astrojs/vercel": "^11.0.13",
-    "astro": "^7.3.8"
+    "astro": "^7.3.8",
+    "heic-to": "^1.6.6"
   }
 }

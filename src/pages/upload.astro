@@ -24,7 +24,7 @@
       </label>
 
       <label>Photos
-        <input id="files" type="file" accept="image/*" multiple required />
+        <input id="files" type="file" accept="image/*,.heic,.heif" multiple required />
       </label>
 
       <button id="go" type="submit">Convert to WebP &amp; upload</button>
@@ -35,8 +35,16 @@
       const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
       const MAX_SIDE = 1600;
 
+      const isHeic = (f: File) => /\.(heic|heif)$/i.test(f.name) || /hei[cf]/i.test(f.type);
+
       async function toWebp(file: File): Promise<Blob> {
-        const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        let src: Blob = file;
+        // Only Safari decodes HEIC natively; convert to JPEG first elsewhere.
+        if (isHeic(file)) {
+          const { heicTo } = await import('heic-to');
+          src = await heicTo({ blob: file, type: 'image/jpeg', quality: 0.92 });
+        }
+        const bmp = await createImageBitmap(src, { imageOrientation: 'from-image' });
         const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
         const c = document.createElement('canvas');
         c.width = Math.round(bmp.width * scale);
