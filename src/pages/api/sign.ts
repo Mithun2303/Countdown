@@ -18,7 +18,7 @@ const safeEqual = (a: string, b: string) => {
 // Returns a signed Cloudinary upload payload for one strip tag.
 // The browser then uploads the (already webp) file straight to Cloudinary,
 // which avoids Vercel's ~4.5MB request body limit.
-export const POST: APIRoute = async ({ request }) => {
+const handle: APIRoute = async ({ request }) => {
   const apiKey = import.meta.env.CLOUDINARY_API_KEY?.trim();
   const apiSecret = import.meta.env.CLOUDINARY_API_SECRET?.trim();
   const cloudName = import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
@@ -51,3 +51,22 @@ export const POST: APIRoute = async ({ request }) => {
 
   return json({ cloudName, apiKey, tags, timestamp, signature });
 };
+
+export const POST: APIRoute = async (ctx) => {
+  try {
+    return await handle(ctx);
+  } catch (e) {
+    console.error('sign failed', e);
+    return json({ error: `sign crashed: ${(e as Error).message}` }, 500);
+  }
+};
+
+// Diagnostic: GET /api/sign shows which env vars the deployed function can see (never their values).
+export const GET: APIRoute = () =>
+  json({
+    CLOUDINARY_API_KEY: !!import.meta.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: !!import.meta.env.CLOUDINARY_API_SECRET,
+    PUBLIC_CLOUDINARY_CLOUD_NAME: !!import.meta.env.PUBLIC_CLOUDINARY_CLOUD_NAME,
+    UPLOAD_PASSWORD: !!import.meta.env.UPLOAD_PASSWORD,
+    node: process.version,
+  });
